@@ -1,11 +1,53 @@
 # coding: utf8
 import os
+import csv
 import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-# texts
-txt_page_title = '%s Conference Deadlines'
+# YEAR!
+year = 2022
+
+# input file name
+fn = 'data.csv'
+
+# create the figure title
+page_title = '%s Events' % (year)
+
+# output to the following folder
+img_path = './'
+# create the output folder if not exists
+if not os.path.exists(img_path): os.makedirs(img_path)
+# make a output file name
+img_fn = '%s/%s-page.pdf' % (img_path, year)
+
+# load events from the CSV file
+day_events_dict = {}
+with open(fn) as csv_file:
+    csv_reader = csv.DictReader(csv_file)
+    line_count = 0
+    for row in csv_reader:
+        if line_count == 0:
+            print(f'* found column names: {", ".join(row)}')
+            line_count += 1
+
+        day = row['date']
+        if day not in day_events_dict: 
+            day_events_dict[day] = []
+
+        day_events_dict[day].append({
+            'label': row['label'],
+            'font_color': 'black' if row['font_color'] == '' else row['font_color'],
+            'bg_color': 'white' if row['bg_color'] == '' else row['bg_color'],
+        })
+        line_count += 1
+    print(f'* processed {line_count} lines.')
+
+# a helper function for converting 
+def _cm2inch(val):
+    '''Convert cm to inch
+    '''
+    return val / 2.54
 
 # base config drawing
 font = {'size': 6}
@@ -22,62 +64,44 @@ mpl.rcParams['ytick.major.size'] = 1.5
 mpl.rcParams['axes.xmargin'] = 0.01
 mpl.rcParams['axes.ymargin'] = 0.01
 
-# load data
-confs = open('conf.txt').readlines()
-
-# parse to list
-day_confs = {}
-cnt_conf = 0
-
-for conf in confs:
-    if conf.startswith('#'): continue
-    
-    conf = conf.strip()
-    tmp = conf.split(',')
-    if len(tmp)<2: continue
-    # conf abbr and deadline day
-    abbr, day = tmp[0], tmp[1]
-    # the rank of this conf.
-    if len(tmp)>=3: rank = tmp[2].upper()
-    else:           rank = 'N'
-    # may several deadlines on same day
-    if day not in day_confs: day_confs[day] = []
-    day_confs[day].append((abbr, rank))
-
-    cnt_conf += 1
-
-print('* done parse, %s confs in total' % cnt_conf)
-
-# DRAW!
-def _c2i(val):
-    return val / 2.54
-
+# Draw now! 
+# clear the figure first
 plt.clf()
-year = 2018
-figtitle = '%s' % year
 
-fig, axes = plt.subplots(1, 1, figsize=(_c2i(28), _c2i(19)))
+# create the canvas
+fig, axes = plt.subplots(1, 1, figsize=(_cm2inch(28), _cm2inch(19)))
+
+# set background of canvas to white
 fig.patch.set_facecolor('white')
+
+# adjust the margin for this canvas
 fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)  # reduce padding
 ax = axes
 
+# width of month block
 w_m = 7
+# height of month block
 h_m = 6
-
+# width of day block
 w_day = 1
+# height of day block
 h_day = 1
 
-title_indent = _c2i(0.1)
-day_indent = _c2i(0.1)
+# the location of title and day
+title_indent = _cm2inch(0.1)
+day_indent = _cm2inch(0.1)
 
+# font dictionary for default settings
 fd_title = {'fontweight':'bold', 'fontsize':12}
 fd_month = {'fontweight':'bold', 'fontsize':130}
-fd_conf = {'fontsize':5 }
-bg_ranks = {'A':'black', 'B':'dimgray', 'C':'gray', 'N':'lightgray'}
-fg_ranks = {'A':'white', 'B':'white', 'C':'black', 'N':'black'}
+fd_event = {'fontsize':5 }
 
 # title
-ax.text(0, 0.6, txt_page_title % year, va='bottom', ha='left', fontdict=fd_title)
+ax.text(
+    0, 0.6, 
+    page_title, 
+    va='bottom', ha='left', fontdict=fd_title
+)
 
 # a header for weekday label
 ax.plot([0, 28], [.5, .5], 'k-', linewidth=2)
@@ -98,27 +122,43 @@ for month in range(12):
     bpy = 0 - row_num * h_m
 
     # big box
-    ax.plot([bpx, bpx+w_m, bpx+w_m, bpx,     bpx],
-            [bpy, bpy,     bpy-h_m, bpy-h_m, bpy], 'k-')
+    ax.plot(
+        [bpx, bpx+w_m, bpx+w_m, bpx,     bpx],
+        [bpy, bpy,     bpy-h_m, bpy-h_m, bpy], 
+        'k-',
+        linewidth=1
+    )
     
     # draw week row
     for i in range(h_m-1):
-        ax.plot([bpx, bpx+w_m],
-                [bpy - h_day * (i+1), bpy - h_day * (i+1)], color='k', linestyle='dotted')
+        ax.plot(
+            [bpx, bpx+w_m],
+            [bpy - h_day * (i+1), bpy - h_day * (i+1)], 
+            color='k', 
+            linestyle='dotted'
+        )
     # draw week col
     for i in range(w_m-1):
-        ax.plot([bpx + w_day * (i+1), bpx + w_day * (i+1)],
-                [bpy, bpy - h_m], color='k', linestyle='dotted')
+        ax.plot(
+            [bpx + w_day * (i+1), bpx + w_day * (i+1)],
+            [bpy, bpy - h_m], 
+            color='k', 
+            linestyle='dotted'
+        )
         
     # month title
     ax.text(bpx + w_m * 0.5, bpy - h_m*0.6, '%02d' % (month+1), 
-            color='gray', fontdict=fd_month, alpha=.1, va='center', ha='center')
+            color='gray', fontdict=fd_month, alpha=.2, va='center', ha='center')
     
     # set the detail
     row_week = 0
     for i in range(1, 32):
-        try:   day = datetime.datetime(year, month+1, i)
-        except:  break
+        try:
+            # if 31 is out of range for some months
+            # this will throw an exception   
+            day = datetime.datetime(year, month+1, i)
+        except:  
+            break
         
         # draw the date
         weekday = day.weekday()
@@ -126,22 +166,34 @@ for month in range(12):
         pos_y = bpy - row_week
         ax.text(pos_x + day_indent, pos_y - day_indent, '%02d'%i, color="gray", va='top')
         
-        # add conf to this
-        date_str = '%02d%02d' % (month+1, i)
-        if date_str in day_confs:
-            conf_seq = 0
-            for conf in day_confs[date_str]:
+        # add event to this date
+        # format the date as YYYY-mm-dd
+        date_str = day.strftime('%Y-%m-%d')
+
+        # try to find this date in the dictionary
+        if date_str in day_events_dict:
+            # define the sequence number of the events
+            event_seq = 0
+            for event in day_events_dict[date_str]:
+                e_label = event['label']
                 ax.add_patch(
                     mpl.patches.Rectangle(
-                        (pos_x + w_day - 1, pos_y - (4-conf_seq)*h_day*0.25),   # (x,y)
+                        (pos_x + w_day - 1, pos_y - (4-event_seq)*h_day*0.25),   # (x,y)
                         w_day,          # width
                         h_day*0.24,          # height,
-                        facecolor=bg_ranks[conf[1]]
+                        facecolor=event['bg_color']
                     )
                 )
-                ax.text(pos_x + w_day*0.5, pos_y - (4-conf_seq)*h_day*0.25, conf[0], 
-                        color=fg_ranks[conf[1]], va='bottom', ha='center', fontdict=fd_conf)
-                conf_seq += 1
+                ax.text(
+                    pos_x + w_day*0.5, 
+                    pos_y - (4-event_seq)*h_day*0.25, 
+                    e_label, 
+                    color=event['font_color'], 
+                    va='bottom', 
+                    ha='center', 
+                    fontdict=fd_event
+                )
+                event_seq += 1
         
         if weekday == 6: row_week += 1
 
@@ -154,9 +206,7 @@ ax.spines['left'].set_visible(False)
 ax.set_xticks([])
 ax.set_yticks([])
 
-img_path = './'
-if not os.path.exists(img_path): os.makedirs(img_path)
-img_fn = '%s/dcal-%s' % (img_path, figtitle)
-fig.savefig(img_fn + '.pdf', dpi=300, bbox_inches='tight')
+# save this file
+fig.savefig(img_fn, dpi=300, bbox_inches='tight')
 print('* saved PDF!')
 print('* done!')
