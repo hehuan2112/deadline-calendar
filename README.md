@@ -1,18 +1,19 @@
 # Deadline Calendar
-A year calendar of conference deadlines
+
+A year calendar of events
 
 ## Requirements
 
 Only one lib is required: `matplotlib`
-https://raw.githubusercontent.com/hehuan2112/deadline-calendar/master/demo.png
+
 ## Usage
 
-Only two steps are required:
+Only the following steps:
 
-1. A conference list must be prepared, which contains the conferences you want to add to the calendar.
-   Please refer to the format of `conf.txt`.
-2. run the script `draw_calendar.py`
+1. A `data.csv` must be prepared, which contains the events you want to add to the calendar. The format of each row is `YYYY-mm-dd,label,font_color,bg_color`. Please ensure a short label length because of the limited space in date cells.
+2. Make sure the `year` is correctly defined in the script `draw_calendar.py`.
+3. Run `python draw_calendar.py`, then a PDF file will be generated in the same folder.
 
-After that, a pdf file will be in the same folder:
+It looks like the following:
 
 ![](https://raw.githubusercontent.com/hehuan2112/deadline-calendar/master/demo.png)
